@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>JamRoom</title>
+    <link rel="icon" href="{{ url_for('static', filename='music_1.svg') }}" type="image/x-icon">
+</head>
+<body>
+    <h1>Welcome to JamRoom</h1>
+    <h2>Hello {{ user }}</h2>
+    <div class="container-card">
+        <form action="/logout" method="post">
+            <button type="submit" class="login-button">Logout</button>
+        </form>
+    </div>
+</body>
+</html>
