@@ -1,12 +1,15 @@
-from flask import Flask, request, render_template, session, redirect, url_for, flash, jsonify
+from flask import Flask, request, render_template, session, redirect, url_for, flash, Blueprint
 from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
 import os
 import re
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.environ.get('SECRET_KEY','SAULGOODMAN')
+app.secret_key = os.getenv('SECRET_KEY')
 
 db = SQLAlchemy(app)
 
