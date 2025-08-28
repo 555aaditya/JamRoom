@@ -1,18 +1,84 @@
-from flask import Flask, request, render_template, session, redirect, url_for, flash, Blueprint
+'''--------------------------------------------------------IMPORTS--------------------------------------------------------'''
+
+from flask import Flask, request, render_template, session, redirect, url_for, flash, jsonify
+from flask_socketio import SocketIO, join_room, leave_room, emit, send
+from pymongo import MongoClient
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+import random
+import string
 import os
 import re
 
+# .env file
 load_dotenv()
 
+# flask app initialization
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = os.getenv('SECRET_KEY')
 
+# SocketIO Initialization
+socketio = SocketIO(app)
+
+'''--------------------------------------------------------SOCKET-IO-EVENTS--------------------------------------------------------'''
+
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Client disconnected")
+
+@socketio.on('join')
+def on_join(data):
+    username = data['username']
+    room_key = data['room_key']
+    
+    PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': 1}})
+
+    join_room(room_key)
+    
+    room_data = PublicRooms.find_one({'room_key': room_key})
+    updated_listeners = room_data['listeners']
+
+    emit('room_message', {'msg': f'{username} has entered the room. ({updated_listeners} listeners)'}, room=room_key)
+
+# This code should already be in your app.py file
+
+@socketio.on('leave')
+def on_leave(data):
+    username = data['username']
+    room_key = data['room_key']
+
+    # Decrement the listener count for the room in MongoDB
+    PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': -1}})
+
+    leave_room(room_key)
+
+    # Get the updated listener count
+    room_data = PublicRooms.find_one({'room_key': room_key})
+    updated_listeners = room_data['listeners']
+
+    # Emit a message to all clients in the room with the updated listener count
+    emit('room_message', {'msg': f'{username} has left the room. ({updated_listeners} listeners)'}, room=room_key)
+    
+@socketio.on('send_message')
+def handle_message(data):
+    room_key = data['room_key']
+    message = data['msg']
+    username = data['username']
+    
+    emit('new_message', {'username': username, 'msg': message}, room=room_key)
+
+'''--------------------------------------------------------DATABASES--------------------------------------------------------'''
+
+# SQL initialization
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# define SQL DataBase
 class users(db.Model):
     _id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -24,13 +90,34 @@ class users(db.Model):
         self.email = email
         self.password_hash = password
 
-# Home Page
+# PyMongo initialization
+client = MongoClient("mongodb://localhost:27017")
+mdb = client.JamRoom
+
+# PyMongo collections
+PublicRooms = mdb.PublicRooms
+PrivateRooms = mdb.PrivateRooms
+Users = mdb.Users
+
+'''--------------------------------------------------------HELPER-FUNCTION--------------------------------------------------------'''
+
+def generate_room_key(length=5):
+    characters = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(characters) for i in range(length))
+
+'''--------------------------------------------------------APP-ROUTES--------------------------------------------------------'''
+
+
+'''--------------------------------------------------------HOME-PAGE-ROUTE--------------------------------------------------------'''
+
 @app.route('/', methods=["GET","POST"])
 def entry():
     if "user" in session:
-        return render_template("home.html", user=session.get("user"))
+        return redirect(url_for("home"))
     else:
         return redirect(url_for("login"))
+    
+'''--------------------------------------------------------LOGIN-ROUTE--------------------------------------------------------'''
 
 @app.route('/login', methods=["GET","POST"])
 def login():
@@ -42,7 +129,7 @@ def login():
         user_obj = users.query.filter((users.username == login_id) | (users.email == login_id)).first()
         if user_obj and user_obj.password_hash == password:
             session["user"] = user_obj.username
-            return render_template("home.html", user=user_obj.username)
+            return redirect(url_for("home"))
         else:
             if user_obj and user_obj.password_hash != password:
                 flash("Incorrect password")
@@ -50,8 +137,10 @@ def login():
                 flash("User not found")
             return render_template("login.html")
     if "user" in session:
-        return render_template("home.html", user=session.get("user"))
+        return redirect(url_for("home"))
     return render_template("login.html")
+
+'''--------------------------------------------------------REGISTER-ROUTE--------------------------------------------------------'''
 
 @app.route('/register', methods=["GET","POST"])
 def register():
@@ -102,6 +191,97 @@ def register():
 
     return render_template("register.html")
 
+'''--------------------------------------------------------MAIN-PAGE-ROUTE--------------------------------------------------------'''
+
+@app.route('/home', methods=["GET","POST"])
+def home():
+    if "user" in session:
+        return render_template("home.html", user=session.get("user"))
+    
+'''--------------------------------------------------------CREATE-ROOM-ROUTE--------------------------------------------------------'''
+
+@app.route('/create-room', methods=["POST"])
+def create_room():
+    if "user" not in session:
+        flash("You must be logged in to create a room.")
+        return redirect(url_for("login"))
+
+    room_name = request.form.get("room_name", "").strip()
+    if not room_name:
+        flash("Room name is required.")
+        return redirect(url_for("home"))
+
+    room_key = generate_room_key()
+    while PublicRooms.find_one({'room_key': room_key}):
+        room_key = generate_room_key()
+
+    new_room = {
+        'name': room_name,
+        'room_key': room_key,
+        'listeners': 0,
+        'creator': session.get("user")
+    }
+    
+    PublicRooms.insert_one(new_room)
+    
+    flash(f"Room '{room_name}' created successfully with code: {room_key}")
+    return redirect(url_for("home"))
+
+'''--------------------------------------------------------JOIN-ROOM-ROUTE--------------------------------------------------------'''
+
+@app.route('/join-room', methods=["POST"])
+def join_room_route():
+    if "user" not in session:
+        flash("You must be logged in to join a room.")
+        return redirect(url_for("login"))
+
+    room_key = request.form.get("room_key", "").strip().upper()
+    if not room_key:
+        flash("Room code is required.")
+        return redirect(url_for("home"))
+        
+    public_room = PublicRooms.find_one({'room_key': room_key})
+
+    if public_room:
+        return redirect(url_for("room_page", room_key=room_key))
+    else:
+        flash("Room not found.")
+        return redirect(url_for("home"))
+    
+'''--------------------------------------------------------ROOM-ROUTES--------------------------------------------------------'''
+
+@app.route('/room/<room_key>', methods=["GET", "POST"])
+def room_page(room_key):
+    if "user" not in session:
+        flash("You must be logged in to view a room.")
+        return redirect(url_for("login"))
+    
+    room_data = PublicRooms.find_one({'room_key': room_key})
+
+    if not room_data:
+        flash("Room not found.")
+        return redirect(url_for("home"))
+
+    return render_template("room.html", room=room_data)
+
+'''--------------------------------------------------------API-END-POINT-ROUTE--------------------------------------------------------'''
+
+@app.route('/api/public-rooms', methods=['GET'])
+def public_rooms_api():
+    try:
+        rooms = list(PublicRooms.find({}))
+
+        for room in rooms:
+            if '_id' in room:
+                room['_id'] = str(room['_id'])
+
+        return jsonify(rooms)
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''--------------------------------------------------------LOGOUT-ROUTE--------------------------------------------------------'''
+
 @app.route('/logout', methods=["POST"]) 
 def logout():
     session.pop("user", None)
@@ -109,4 +289,4 @@ def logout():
         
 if __name__ == '__main__':
     db.create_all()
-    app.run(port='4444', host='0.0.0.0', debug=False)
+    socketio.run(app, port='4444', host='0.0.0.0', debug=False)

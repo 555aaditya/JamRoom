@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>JamRoom - {{ room.name }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  </head>
+  <body>
+    <h1>Welcome to {{ room.name }}</h1>
+    <p>Room Key: {{ room.room_key }}</p>
+    <p>Listeners: <span id="listener-count">{{ room.listeners }}</span></p>
+
+    <div id="messages"></div>
+
+    <button id="leave-room-button">Leave Room</button>
+
+    <h2>Chat</h2>
+    <div
+      id="messages-container"
+      style="
+        height: 300px;
+        border: 1px solid #ccc;
+        overflow-y: scroll;
+        padding: 10px;
+      "
+    ></div>
+    <form id="message-form">
+      <input type="text" id="message-input" placeholder="Type a message..." />
+      <button type="submit">Send</button>
+    </form>
+
+    <script>
+      const CURRENT_USER = "{{ session.get('user') }}";
+      const ROOM_KEY = "{{ room.room_key }}";
+    </script>
+    <script src="{{ url_for('static', filename='scripts/room.js') }}"></script>
+  </body>
+</html>

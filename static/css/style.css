@@ -119,3 +119,35 @@ button {
         font-size: 0.9375rem;
     }
 }
+
+.rooms-container {
+    display: flex;
+    overflow-x: auto;
+    gap: 20px;
+    padding: 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none; 
+}
+
+.rooms-container::-webkit-scrollbar {
+    display: none;
+}
+
+.room-card {
+    min-width: 250px; 
+    background-color: #2a2a2a; 
+    border-radius: 10px;
+    padding: 20px;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out;
+}
+
+.room-card:hover {
+    transform: scale(1.03);
+}
+
+.room-card h3 {
+    margin-top: 0;
+}
