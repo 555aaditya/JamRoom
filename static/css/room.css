@@ -29,6 +29,68 @@
   margin-bottom: 0.5rem;
 }
 
+/* Room Key and Listeners Styling */
+.room-info {
+  background-color: #2a2a2a;
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  border-left: 4px solid #6366f1;
+}
+
+.room-key {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.room-key-label {
+  color: #a0a0a0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.9rem;
+}
+
+.room-key-value {
+  color: #6366f1;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  background-color: #1e1e1e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid #444;
+}
+
+.listeners-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.listeners-label {
+  color: #a0a0a0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.9rem;
+}
+
+.listeners-count {
+  color: #10b981;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  background-color: #1e1e1e;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  border: 1px solid #444;
+}
+
 .music-player-placeholder {
   flex-grow: 1; /* Allows it to take available vertical space */
   background-color: #2a2a2a;
@@ -73,6 +135,8 @@
   margin-right: 1rem;
   margin-top: 1rem;
   transition: background-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .leave-room-btn {

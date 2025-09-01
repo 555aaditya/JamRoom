@@ -12,7 +12,7 @@
     />
     <link
       rel="icon"
-      href="{{ url_for('static', filename='Jam-Room.svg') }}"
+      href="{{ url_for('static', filename='favicon.svg') }}"
       type="image/x-icon"
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
@@ -38,8 +38,17 @@
     <main class="room-layout">
       <section id="main-player-section" class="player-controls-container">
         <h1>Welcome to {{ room.name }}</h1>
-        <p>Room Key: {{ room.room_key }}</p>
-        <p>Listeners: <span id="listener-count">{{ room.listeners }}</span></p>
+        
+        <div class="room-info">
+          <div class="room-key">
+            <span class="room-key-label">Room Key:</span>
+            <span class="room-key-value">{{ room.room_key }}</span>
+          </div>
+          <div class="listeners-info">
+            <span class="listeners-label">Listeners:</span>
+            <span class="listeners-count" id="listener-count">{{ room.listeners }}</span>
+          </div>
+        </div>
 
         <div class="music-player-placeholder">
           <p>Music Player will go here</p>

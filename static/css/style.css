@@ -118,7 +118,7 @@ body {
 }
 
 .room-card-content {
-    padding: 1.5rem;
+    padding: 2rem;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -167,6 +167,8 @@ body {
     background-color: #4f46e5;
     transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    min-width: 120px;
+    width: 120px;
 }
 
 .room-card .join-btn:hover {
@@ -203,6 +205,9 @@ body {
   cursor: pointer;
   color: #fff;
   transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  min-width: 120px;
+  width: 120px;
+  flex-shrink: 0;
 }
 
 .join-btn {
