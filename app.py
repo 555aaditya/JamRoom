@@ -1,6 +1,6 @@
 '''--------------------------------------------------------IMPORTS--------------------------------------------------------'''
 
-from flask import Flask, request, render_template, session, redirect, url_for, flash, jsonify
+from flask import Flask, request, render_template, session, redirect, url_for, flash, jsonify, get_flashed_messages
 from flask_socketio import SocketIO, join_room, leave_room, emit, send
 from pymongo import MongoClient
 from flask_sqlalchemy import SQLAlchemy
@@ -9,6 +9,7 @@ import random
 import string
 import os
 import re
+import datetime
 
 # .env file
 load_dotenv()
@@ -35,34 +36,41 @@ def on_join(data):
     username = data['username']
     room_key = data['room_key']
     
-    PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': 1}})
+    room_data = PublicRooms.find_one({'room_key': room_key})
+    if room_data:
+        PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': 1}})
+    else:
+        room_data = PrivateRooms.find_one({'room_key': room_key})
+        if room_data:
+            PrivateRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': 1}})
+    
+    updated_room_data = PublicRooms.find_one({'room_key': room_key}) or PrivateRooms.find_one({'room_key': room_key})
+    updated_listeners = updated_room_data['listeners']
 
     join_room(room_key)
     
-    room_data = PublicRooms.find_one({'room_key': room_key})
-    updated_listeners = room_data['listeners']
-
     emit('room_message', {'msg': f'{username} has entered the room. ({updated_listeners} listeners)'}, room=room_key)
-
-# This code should already be in your app.py file
 
 @socketio.on('leave')
 def on_leave(data):
     username = data['username']
     room_key = data['room_key']
 
-    # Decrement the listener count for the room in MongoDB
-    PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': -1}})
+    room_data = PublicRooms.find_one({'room_key': room_key})
+    if room_data:
+        PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': -1}})
+    else:
+        room_data = PrivateRooms.find_one({'room_key': room_key})
+        if room_data:
+            PrivateRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': -1}})
 
     leave_room(room_key)
 
-    # Get the updated listener count
-    room_data = PublicRooms.find_one({'room_key': room_key})
-    updated_listeners = room_data['listeners']
+    updated_room_data = PublicRooms.find_one({'room_key': room_key}) or PrivateRooms.find_one({'room_key': room_key})
+    updated_listeners = updated_room_data['listeners']
 
-    # Emit a message to all clients in the room with the updated listener count
     emit('room_message', {'msg': f'{username} has left the room. ({updated_listeners} listeners)'}, room=room_key)
-    
+        
 @socketio.on('send_message')
 def handle_message(data):
     room_key = data['room_key']
@@ -200,54 +208,61 @@ def home():
     
 '''--------------------------------------------------------CREATE-ROOM-ROUTE--------------------------------------------------------'''
 
-@app.route('/create-room', methods=["POST"])
+@app.route('/create-room', methods=['POST'])
 def create_room():
-    if "user" not in session:
-        flash("You must be logged in to create a room.")
-        return redirect(url_for("login"))
-
-    room_name = request.form.get("room_name", "").strip()
-    if not room_name:
-        flash("Room name is required.")
-        return redirect(url_for("home"))
-
-    room_key = generate_room_key()
-    while PublicRooms.find_one({'room_key': room_key}):
+    try:
+        if "user" not in session:
+            flash('You must be logged in to create a room.', 'error')
+            return redirect(url_for('home'))
+            
+        room_name = request.form.get("room_name")
+        if not room_name:
+            flash('Room name is required.', 'error')
+            return redirect(url_for('home'))
+        
+        # Generate unique room key
         room_key = generate_room_key()
+        while PrivateRooms.find_one({'room_key': room_key}):
+            room_key = generate_room_key()
+        
+        # Create private room
+        new_room = {
+            'name': room_name,
+            'room_key': room_key,
+            'creator': session['user'],
+            'listeners': 0,
+            'created_at': datetime.datetime.now()
+        }
+        
+        PrivateRooms.insert_one(new_room)
+        flash(f'Successfully created private room: {room_name} (Code: {room_key})', 'success')
+        return redirect(url_for('home'))
 
-    new_room = {
-        'name': room_name,
-        'room_key': room_key,
-        'listeners': 0,
-        'creator': session.get("user")
-    }
-    
-    PublicRooms.insert_one(new_room)
-    
-    flash(f"Room '{room_name}' created successfully with code: {room_key}")
-    return redirect(url_for("home"))
+    except Exception as e:
+        print(f"Error creating private room: {e}")
+        flash('An error occurred while creating the private room. Please try again.', 'error')
+        return redirect(url_for('home'))
 
 '''--------------------------------------------------------JOIN-ROOM-ROUTE--------------------------------------------------------'''
 
 @app.route('/join-room', methods=["POST"])
 def join_room_route():
     if "user" not in session:
-        flash("You must be logged in to join a room.")
-        return redirect(url_for("login"))
+        return jsonify({'error': 'You must be logged in to join a room.', 'redirect_url': url_for("login")}), 401
 
-    room_key = request.form.get("room_key", "").strip().upper()
+    data = request.get_json()
+    room_key = data.get("room_key", "").strip().upper()
+
     if not room_key:
-        flash("Room code is required.")
-        return redirect(url_for("home"))
+        return jsonify({'error': 'Room code is required.'}), 400
         
-    public_room = PublicRooms.find_one({'room_key': room_key})
+    room = PublicRooms.find_one({'room_key': room_key}) or PrivateRooms.find_one({'room_key': room_key})
 
-    if public_room:
-        return redirect(url_for("room_page", room_key=room_key))
+    if room:
+        return jsonify({'redirect_url': url_for("room_page", room_key=room_key)})
     else:
-        flash("Room not found.")
-        return redirect(url_for("home"))
-    
+        return jsonify({'error': 'Room not found.'}), 404
+
 '''--------------------------------------------------------ROOM-ROUTES--------------------------------------------------------'''
 
 @app.route('/room/<room_key>', methods=["GET", "POST"])
@@ -256,13 +271,50 @@ def room_page(room_key):
         flash("You must be logged in to view a room.")
         return redirect(url_for("login"))
     
-    room_data = PublicRooms.find_one({'room_key': room_key})
+    room_data = PublicRooms.find_one({'room_key': room_key}) or PrivateRooms.find_one({'room_key': room_key})
 
     if not room_data:
         flash("Room not found.")
         return redirect(url_for("home"))
 
     return render_template("room.html", room=room_data)
+
+'''--------------------------------------------------------CREATE-PUBLIC-ROOM-ROUTE--------------------------------------------------------'''
+
+@app.route('/create-public-room', methods=['POST'])
+def create_public_room():
+    try:
+        if "user" not in session:
+            flash('You must be logged in to create a room.', 'error')
+            return redirect(url_for('home'))
+            
+        room_name = request.form.get("room_name")
+        if not room_name:
+            flash('Room name is required.', 'error')
+            return redirect(url_for('home'))
+        
+        # Generate unique room key
+        room_key = generate_room_key()
+        while PublicRooms.find_one({'room_key': room_key}):
+            room_key = generate_room_key()
+        
+        # Create public room
+        new_room = {
+            'name': room_name,
+            'room_key': room_key,
+            'creator': session['user'],
+            'listeners': 0,
+            'created_at': datetime.datetime.now()
+        }
+        
+        PublicRooms.insert_one(new_room)
+        flash(f'Successfully created public room: {room_name} (Code: {room_key})', 'success')
+        return redirect(url_for('home'))
+
+    except Exception as e:
+        print(f"Error creating public room: {e}")
+        flash('An error occurred while creating the room. Please try again.', 'error')
+        return redirect(url_for('home'))
 
 '''--------------------------------------------------------API-END-POINT-ROUTE--------------------------------------------------------'''
 
@@ -282,10 +334,13 @@ def public_rooms_api():
 
 '''--------------------------------------------------------LOGOUT-ROUTE--------------------------------------------------------'''
 
-@app.route('/logout', methods=["POST"]) 
+@app.route('/logout', methods=["POST"])
 def logout():
     session.pop("user", None)
+    get_flashed_messages() 
     return redirect(url_for("login"))
+
+'''--------------------------------------------------------RUN-APP--------------------------------------------------------'''
         
 if __name__ == '__main__':
     db.create_all()

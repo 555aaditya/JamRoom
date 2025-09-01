@@ -3,61 +3,99 @@
   <head>
     <title>JamRoom</title>
     <link
-      rel="icon"
-      href="{{ url_for('static', filename='music_1.svg') }}"
-      type="image/x-icon"
-    />
-    <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='Jam-Room.svg') }}"
+      type="image/x-icon"
+    />
   </head>
-  <body>
-    {% with messages = get_flashed_messages() %} {% if messages %}
-    <ul class="flashes">
-      {% for message in messages %}
-      <li>{{ message }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %} {% endwith %}
-    <h1>Welcome to JamRoom</h1>
-    <h2>Hello {{ user }}</h2>
-    <div class="container-card">
-      <form action="/logout" method="post">
-        <button type="submit" class="login-button">Logout</button>
-      </form>
-    </div>
-
-    <div class="public-rooms-section">
-      <h2>Public Rooms</h2>
-      <div class="rooms-container" id="public-rooms-container"></div>
-    </div>
-
-    <div class="room-actions-section">
-      <h2>Create or Join a Room</h2>
-
-      <form action="/create-room" method="post">
-        <h3>Create a New Room</h3>
-        <input
-          type="text"
-          name="room_name"
-          placeholder="Enter a room name"
-          required
+  <body class="dark-theme">
+    <header class="main-header">
+      <div class="logo-container">
+        <img
+          src="{{ url_for('static', filename='Jam-Room.png') }}"
+          alt="JamRoom Logo"
+          class="logo"
         />
-        <button type="submit">Create Room</button>
-      </form>
-
-      <form action="/join-room" method="post">
-        <h3>Join a Private Room</h3>
-        <input
-          type="text"
-          name="room_key"
-          placeholder="Enter a room code"
-          required
+      </div>
+      <div class="profile-container">
+        <form action="/logout" method="post">
+          <button type="submit" class="logout-btn">Logout</button>
+        </form>
+        <img
+          src="{{ url_for('static', filename='account.png') }}"
+          alt="User Profile"
+          class="profile-pic"
         />
-        <button type="submit">Join Room</button>
-      </form>
-    </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="section">
+        <h2>Explore Public JamRooms</h2>
+        <div class="public-rooms-container">
+            <div class="rooms-scroll-wrapper">
+                <div class="rooms-row" id="public-rooms-row-1">
+                    <!-- First row of room cards -->
+                </div>
+                <div class="rooms-row" id="public-rooms-row-2">
+                    <!-- Second row of room cards -->
+                </div>
+            </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Create a Public JamRoom</h2>
+        <form id="create-public-room-form" method="post" action="/create-public-room">
+          <div class="private-room-actions">
+            <input
+              type="text"
+              name="room_name"
+              placeholder="Enter room name"
+              class="room-input"
+              required
+            />
+            <button type="submit" class="create-btn">Create</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="section">
+        <h2>Join a Private JamRoom</h2>
+        <form id="join-room-form" method="post" action="/join-room">
+          <div class="private-room-actions">
+            <input
+              type="text"
+              name="room_key"
+              placeholder="Room code"
+              class="room-input"
+              required
+            />
+            <button type="submit" class="join-btn">Join</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="section">
+        <h2>Create a Private JamRoom</h2>
+        <form id="create-private-room-form" method="post" action="/create-room">
+          <div class="private-room-actions">
+            <input
+              type="text"
+              name="room_name"
+              placeholder="Enter room name"
+              class="room-input"
+              required
+            />
+            <button type="submit" class="create-btn">Create</button>
+          </div>
+        </form>
+      </section>
+    </main>
 
     <script src="{{ url_for('static', filename='scripts/home.js') }}"></script>
   </body>

@@ -1,45 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JamRoom</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='music_1.svg') }}" type="image/x-icon">
-</head>
-<body>
-    <h1>Welcome to JamRoom</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JamRoom - Login</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/login.css') }}"
+    />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='Jam-Room.svg') }}"
+      type="image/x-icon"
+    />
+  </head>
+  <body class="dark-theme">
+    <header class="main-header centered-header">
+      <div class="logo-container">
+        <img
+          src="{{ url_for('static', filename='Jam-Room.png') }}"
+          alt="JamRoom Logo"
+          class="logo"
+        />
+      </div>
+    </header>
+    <main class="form-container">
+      <div class="login-box">
+        <h2>Login to JamRoom</h2>
 
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <div class="container-card">
+        {% with messages = get_flashed_messages() %} {% if messages %}
         <div class="flash-messages">
-            {% for message in messages %}
-            <p class="flash">{{ message }}</p>
-            {% endfor %}
+          {% for message in messages %}
+          <p>{{ message }}</p>
+          {% endfor %}
         </div>
-    </div>
-    {% endif %}
-    {% endwith %}
+        {% endif %} {% endwith %}
 
-    <div class="container-card">
-        <form action="/login" method="post" class="form-spacing">
-            <div class="form-group">
-                <label for="username">Username or Email</label>
-                <input type="text" id="username" name="username" placeholder="Enter your username or email" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
-            </div>
-            <button type="submit" class="login-button">Login</button>
+        <form action="/login" method="post">
+          <div class="form-group">
+            <label for="username">Username or Email</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Enter your username or email"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button type="submit" class="button">Login</button>
         </form>
-    </div>
 
-    <div class="container-card">
-        <form action="/register" method="GET">
-            <button type="submit" class="register-button">Register</button>
-        </form>
-    </div>
-</body>
+        <p class="form-link">
+          Don't have an account?
+          <a href="{{ url_for('register') }}">Register here</a>
+        </p>
+      </div>
+    </main>
+  </body>
 </html>

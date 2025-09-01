@@ -1,54 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JamRoom - Register</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='music_1.svg') }}" type="image/x-icon">
-</head>
-<body>
-    <h1>Register for JamRoom</h1>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/register.css') }}"
+    />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='Jam-Room.svg') }}"
+      type="image/x-icon"
+    />
+  </head>
+  <body class="dark-theme">
+    <header class="main-header centered-header">
+      <div class="logo-container">
+        <img
+          src="{{ url_for('static', filename='Jam-Room.png') }}"
+          alt="JamRoom Logo"
+          class="logo"
+        />
+      </div>
+    </header>
 
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <div class="container-card">
+    <main class="form-container">
+      <div class="login-box">
+        <h2>Register for JamRoom</h2>
+
+        {% with messages = get_flashed_messages() %} {% if messages %}
         <div class="flash-messages">
-            {% for message in messages %}
-            <p class="flash">{{ message }}</p>
-            {% endfor %}
+          {% for message in messages %}
+          <p>{{ message }}</p>
+          {% endfor %}
         </div>
-    </div>
-    {% endif %}
-    {% endwith %}
+        {% endif %} {% endwith %}
 
-    <div class="container-card">
-        <form action="/register" method="post" class="form-spacing">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Enter your username" required>
-                <small id="username-status"></small>
-            </div>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" placeholder="Enter your email" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
-            </div>
-            <div class="form-group">
-                <label for="confirm_password">Confirm Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required>
-            </div>
-            <button type="submit" class="register-button">Create Account</button>
+        <form action="/register" method="post">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Enter your username"
+              required
+            />
+            <small id="username-status"></small>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              placeholder="Confirm your password"
+              required
+            />
+          </div>
+          <button type="submit" class="button">Create Account</button>
         </form>
-    </div>
 
-    <div class="container-card">
-        <form action="/" method="GET">
-            <button type="submit" class="login-button">Back to Login</button>
-        </form>
-    </div>
-</body>
-</html>
+        <p class="form-link">
+          Already have an account?
+          <a href="{{ url_for('login') }}">Login here</a>
+        </p>
+      </div>
+    </main>
+  </body>
