@@ -243,3 +243,30 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
 }
+
+/* Music Search */
+.search-container { margin-bottom: 1rem; }
+.music-results-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding: 0.625rem 0;
+}
+.music-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #2a2a2a;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  border: 2px solid transparent;
+}
+.music-card:hover { transform: translateY(-4px); border-color: #6366f1; }
+.song-artwork { width: 100%; border-radius: 0.5rem; margin-bottom: 0.75rem; }
+.song-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-artist { font-size: 0.875rem; color: #a0a0a0; margin-bottom: 0.5rem; }
+.song-actions { display: flex; gap: 0.5rem; }
+.song-actions .join-btn { width: auto; min-width: unset; padding: 0.5rem 0.75rem; }

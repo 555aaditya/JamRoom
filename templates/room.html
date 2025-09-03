@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JamRoom - {{ room.name }}</title>
     <link
       rel="stylesheet"
@@ -15,30 +17,34 @@
       href="{{ url_for('static', filename='favicon.svg') }}"
       type="image/x-icon"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
   </head>
   <body class="dark-theme">
     <header class="main-header">
       <div class="logo-container">
-        <img
-          src="{{ url_for('static', filename='Jam-Room.png') }}"
-          alt="JamRoom Logo"
-          class="logo"
-        />
+        <a href="/home" class="logo-link">
+          <img
+            src="{{ url_for('static', filename='Jam-Room.png') }}"
+            alt="JamRoom Logo"
+            class="logo"
+          />
+        </a>
       </div>
       <div class="profile-container">
-        <img
-          src="{{ url_for('static', filename='account.png') }}"
-          alt="User Profile"
-          class="profile-pic"
-        />
+        <button class="back-home-btn" id="leave-room-button">Leave Room</button>
       </div>
     </header>
 
     <main class="room-layout">
-      <section id="main-player-section" class="player-controls-container">
+      <section id="main-player-section">
         <h1>Welcome to {{ room.name }}</h1>
-        
+        {% if not user or not user.spotify_access_token %}
+        <div class="section">
+          <p>Please link your Spotify account to enable playback.</p>
+          <a href="{{ url_for('spotify_login') }}">
+            <button class="connect-spotify-btn">Connect to Spotify</button>
+          </a>
+        </div>
+        {% endif %}
         <div class="room-info">
           <div class="room-key">
             <span class="room-key-label">Room Key:</span>
@@ -50,44 +56,76 @@
           </div>
         </div>
 
-        <div class="music-player-placeholder">
-          <p>Music Player will go here</p>
-          <p>Current Track: [No track playing]</p>
+        <div class="music-player-area">
+          <img
+            id="player-artwork"
+            src="{{ url_for('static', filename='default-album.png') }}"
+            alt="Album Artwork"
+            class="player-artwork-large"
+          />
+          <h3 id="player-current-track">Current Track: [No track playing]</h3>
+          <p id="player-status"></p>
+
+          <div class="progress-container">
+            <span id="current-time">0:00</span>
+            <div class="progress-bar">
+              <div class="progress" id="progress"></div>
+            </div>
+            <span id="duration">0:00</span>
+          </div>
+
+          <div class="volume-container">
+            <span>Volume</span>
+            <input type="range" id="volume-slider" min="0" max="100" value="70">
+            <span id="volume-display">70%</span>
+          </div>
+          
           <div class="player-controls">
-            <button>⏮️</button>
-            <button>▶️</button>
-            <button>⏭️</button>
+            <button id="prev-btn">⏮️</button>
+            <button id="play-pause-btn">▶️</button>
+            <button id="next-btn">⏭️</button>
           </div>
         </div>
 
-        <form action="/home">
-          <button type="submit" class="back-home-btn">Back to Home</button>
-        </form>
-
-        <button id="leave-room-button" class="leave-room-btn">
-          Leave Room
-        </button>
+        <section class="section">
+          <h2>Search for Music</h2>
+          <div class="search-container">
+            <input
+              type="text"
+              id="music-search-input"
+              placeholder="Search for songs..."
+              class="room-input"
+            />
+          </div>
+          <div id="music-results-container" class="music-results-container">
+            </div>
+        </section>
       </section>
 
-      <section id="chat-section" class="chat-container">
+      <section id="chat-section">
         <h2>Chat</h2>
-        <div class="messages-container" id="messages-container"></div>
+        <div id="messages-container" class="messages-container">
+          </div>
         <form id="message-form" class="message-input-form">
           <input
             type="text"
             id="message-input"
-            placeholder="Type a message..."
+            placeholder="Type your message..."
             class="chat-input"
           />
           <button type="submit" class="send-btn">Send</button>
         </form>
       </section>
     </main>
-
+    
     <script>
-      const CURRENT_USER = "{{ session.get('user') }}";
-      const ROOM_KEY = "{{ room.room_key }}";
+        const SPOTIFY_ACCESS_TOKEN = "{{ user.spotify_access_token if user and user.spotify_access_token else '' }}";
+        const ROOM_KEY = "{{ room.room_key }}";
+        const CURRENT_USER = "{{ session['user'] }}";
+        const DEFAULT_ARTWORK_URL = "{{ url_for('static', filename='Jam-Room.png') }}";
     </script>
+    <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='scripts/room.js') }}"></script>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
   </body>
 </html>

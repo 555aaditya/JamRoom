@@ -104,3 +104,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Music search logic
+(function(){
+  const musicSearchInput = document.getElementById('music-search-input');
+  const musicResultsContainer = document.getElementById('music-results-container');
+  if (!musicSearchInput || !musicResultsContainer) return;
+
+  let searchTimeout = null;
+
+  const renderResults = (songs) => {
+    musicResultsContainer.innerHTML = '';
+    if (!songs || songs.length === 0) {
+      musicResultsContainer.innerHTML = '<p>No results found.</p>';
+      return;
+    }
+    songs.forEach(song => {
+      const card = document.createElement('div');
+      card.className = 'music-card';
+      card.innerHTML = `
+        <img src="${song.artwork || ''}" alt="${song.album || ''}" class="song-artwork"/>
+        <div class="song-info">
+          <p class="song-title">${song.title || ''}</p>
+          <p class="song-artist">${song.artist || ''}</p>
+        </div>
+        ${song.preview ? `<audio controls src="${song.preview}" style="width:100%"></audio>` : ''}
+      `;
+      musicResultsContainer.appendChild(card);
+    });
+  };
+
+  const fetchResults = (q) => {
+    if (!q) { musicResultsContainer.innerHTML = ''; return; }
+    fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(renderResults)
+      .catch(() => { musicResultsContainer.innerHTML = '<p>Failed to load music results.</p>'; });
+  };
+
+  musicSearchInput.addEventListener('keyup', (e) => {
+    const q = e.target.value.trim();
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => fetchResults(q), 500);
+  });
+})();
