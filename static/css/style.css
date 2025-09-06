@@ -14,14 +14,9 @@ body {
   padding: 1rem 2rem;
   background-color: #1e1e1e;
   border-bottom: 1px solid #333;
-  position: relative;
 }
 
 .logo-container {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,10 +29,9 @@ body {
 }
 
 .profile-container {
-  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .profile-pic {
@@ -270,3 +264,36 @@ body {
 .song-artist { font-size: 0.875rem; color: #a0a0a0; margin-bottom: 0.5rem; }
 .song-actions { display: flex; gap: 0.5rem; }
 .song-actions .join-btn { width: auto; min-width: unset; padding: 0.5rem 0.75rem; }
+
+/* Updated Spotify Button Styles */
+.spotify-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 2rem; /* Pill shape */
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    color: #fff;
+}
+
+.connect-spotify-btn {
+  background-color: #1DB954; /* Spotify Green */
+}
+
+.connect-spotify-btn:hover {
+  background-color: #1ed760;
+  transform: translateY(-1px);
+}
+
+.disconnect-spotify-btn {
+  background-color: #dc2626; /* Red for disconnect */
+}
+
+.disconnect-spotify-btn:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+}

@@ -14,6 +14,7 @@ import requests
 import base64
 import json
 import urllib.parse
+from collections import defaultdict
 
 # .env file
 load_dotenv()
@@ -25,6 +26,16 @@ app.secret_key = os.getenv('SECRET_KEY')
 # SocketIO Initialization
 socketio = SocketIO(app)
 
+# Global dictionary to store room playback states
+# Key: room_key, Value: {'track_uri': str, 'position_ms': int, 'is_paused': bool, 'track_info': dict}
+room_states = {}
+
+# Keep track of clients in each room to count listeners
+room_listeners = defaultdict(set)
+
+def get_room_users(room_key):
+    return len(room_listeners[room_key])
+
 '''--------------------------------------------------------SOCKET-IO-EVENTS--------------------------------------------------------'''
 
 @socketio.on('connect')
@@ -34,12 +45,21 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print("Client disconnected")
-
+    # Clean up internal listener tracking for the disconnected SID
+    for room_key, sids in room_listeners.items():
+        if request.sid in sids:
+            sids.remove(request.sid)
+            # You might also want to decrement the database listener count here
+            break
+    
 @socketio.on('join')
 def on_join(data):
     username = data['username']
     room_key = data['room_key']
     
+    join_room(room_key)
+    room_listeners[room_key].add(request.sid)
+
     room_data = PublicRooms.find_one({'room_key': room_key})
     if room_data:
         PublicRooms.update_one({'room_key': room_key}, {'$inc': {'listeners': 1}})
@@ -50,15 +70,20 @@ def on_join(data):
     
     updated_room_data = PublicRooms.find_one({'room_key': room_key}) or PrivateRooms.find_one({'room_key': room_key})
     updated_listeners = updated_room_data['listeners']
-
-    join_room(room_key)
     
     emit('room_message', {'msg': f'{username} has entered the room. ({updated_listeners} listeners)'}, room=room_key)
+    # If a playback state exists, sync it to the newly joined client
+    if room_key in room_states:
+        emit('sync_playback', room_states[room_key], room=request.sid)
 
 @socketio.on('leave')
 def on_leave(data):
     username = data['username']
     room_key = data['room_key']
+    
+    # Remove the user from the room listener set
+    if request.sid in room_listeners[room_key]:
+        room_listeners[room_key].remove(request.sid)
 
     room_data = PublicRooms.find_one({'room_key': room_key})
     if room_data:
@@ -74,8 +99,12 @@ def on_leave(data):
     updated_listeners = updated_room_data['listeners']
 
     emit('room_message', {'msg': f'{username} has left the room. ({updated_listeners} listeners)'}, room=room_key)
-    return { 'status': 'ok' }
-        
+    
+    # If the last person leaves the room, clear the state
+    if get_room_users(room_key) == 0:
+        if room_key in room_states:
+            del room_states[room_key]
+
 @socketio.on('send_message')
 def handle_message(data):
     room_key = data['room_key']
@@ -86,35 +115,108 @@ def handle_message(data):
 
 @socketio.on('song_play')
 def handle_song_play(data):
-    room_key = data['room_key']
-    song = data['song']
-    timestamp = data.get('timestamp', 0)
+    room_key = data.get('room_key')
+    song = data.get('song')
+    sender_sid = request.sid
     
-    # Broadcast to all users in the room except the sender
-    emit('song_play', {
+    if not room_key or not song:
+        print(f"Invalid song_play data received: {data}")
+        return
+    
+    print(f"Song play event in room {room_key} from sender {sender_sid}: {song.get('title', 'Unknown')} by {song.get('artist', 'Unknown')}")
+    
+    # Update the room state with the new song
+    room_states[room_key] = {
+        'track_uri': song.get('uri'),
+        'position_ms': 0,
+        'is_paused': False,
+        'track_info': {
+            'title': song.get('title'),
+            'artist': song.get('artist'),
+            'artwork': song.get('artwork'),
+            'album': song.get('album'),
+            'duration': song.get('duration')
+        }
+    }
+    
+    # Get all users in the room except the sender
+    room_sids = room_listeners.get(room_key, set())
+    other_sids = room_sids - {sender_sid}
+    
+    print(f"Room {room_key} has {len(room_sids)} total users: {list(room_sids)}")
+    print(f"Sender SID: {sender_sid}")
+    print(f"Other SIDs (excluding sender): {list(other_sids)}")
+    print(f"Broadcasting to {len(other_sids)} other users in room {room_key}, excluding sender {sender_sid}")
+    
+    # Broadcast to all users in the room EXCEPT the sender (to avoid interference)
+    # Use a different event name to completely isolate the original user
+    emit('song_play_sync', {
         'song': song,
-        'timestamp': timestamp
+        'position_ms': 0
+    }, room=room_key, include_self=False)
+    
+    print(f"✅ Broadcasted song_play to room {room_key} (excluding sender {sender_sid})")
+    print(f"📊 Broadcast summary: {len(other_sids)} recipients, sender excluded")
+
+@socketio.on('player_toggle_play')
+def handle_player_toggle_play(data):
+    room_key = data['room_key']
+    is_paused = data['is_paused']
+    position_ms = data['position_ms']
+
+    print(f"Received player_toggle_play event in room {room_key}: is_paused={is_paused}, position_ms={position_ms}")
+    
+    if room_key in room_states:
+        room_states[room_key]['is_paused'] = is_paused
+        room_states[room_key]['position_ms'] = position_ms
+    
+    emit('sync_toggle_play', {
+        'is_paused': is_paused,
+        'position_ms': position_ms
     }, room=room_key, include_self=False)
 
-@socketio.on('song_pause')
-def handle_song_pause(data):
-    room_key = data['room_key']
-    timestamp = data.get('timestamp', 0)
-    
-    # Broadcast to all users in the room except the sender
-    emit('song_pause', {
-        'timestamp': timestamp
-    }, room=room_key, include_self=False)
+    print(f"Broadcasted sync_toggle_play to room {room_key}")
 
-@socketio.on('song_ended')
-def handle_song_ended(data):
+@socketio.on('player_seek')
+def handle_player_seek(data):
     room_key = data['room_key']
-    timestamp = data.get('timestamp', 0)
+    position_ms = data['position_ms']
+
+    print(f"Received player_seek event in room {room_key}: position_ms={position_ms}")
     
-    # Broadcast to all users in the room except the sender
-    emit('song_ended', {
-        'timestamp': timestamp
+    if room_key in room_states:
+        room_states[room_key]['position_ms'] = position_ms
+        
+    emit('sync_seek', {
+        'position_ms': position_ms
     }, room=room_key, include_self=False)
+    
+    print(f"Broadcasted sync_seek to room {room_key}")
+
+@socketio.on('song_update')
+def handle_song_update(data):
+    room_key = data['room_key']
+    state = data['state']
+    
+    # Update the server's copy of the room state
+    if room_key in room_states:
+        room_states[room_key] = state
+
+@socketio.on('sync_request')
+def handle_sync_request(data):
+    room_key = data.get('room_key')
+    if not room_key:
+        print("Invalid sync_request: missing room_key")
+        return
+        
+    print(f"Sync request from user in room {room_key}")
+    if room_key in room_states:
+        state = room_states[room_key]
+        print(f"Sending sync data to user: {state}")
+        emit('sync_playback', state, room=request.sid) # Send only to the requesting user
+    else:
+        print(f"No playback state found for room {room_key}")
+        emit('sync_playback', None, room=request.sid)
 
 '''--------------------------------------------------------DATABASES--------------------------------------------------------'''
 
@@ -157,21 +259,48 @@ SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:4444/spotify-callback'
 
 '''--------------------------------------------------------SPOTIFY-HELPER-FUNCTION--------------------------------------------------------'''
 
+def validate_spotify_token(token):
+    """Validate a Spotify token by making a test API call"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get("https://api.spotify.com/v1/me", headers=headers, timeout=10)
+        if response.status_code == 200:
+            user_info = response.json()
+            print(f"Token validation successful for user: {user_info.get('display_name', 'Unknown')}")
+            return True
+        else:
+            print(f"Token validation failed with status: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"Token validation error: {e}")
+        return False
+
 def get_spotify_token(user_id):
     user = users.query.filter_by(username=user_id).first()
-    if not user or not user.spotify_access_token:
+    if not user:
+        print(f"User {user_id} not found in database")
+        return None
+    
+    if not user.spotify_access_token:
+        print(f"No access token for user {user_id}")
         return None
 
-    # Check if token is expired
-    if user.spotify_token_expiry and user.spotify_token_expiry > datetime.datetime.now():
-        return user.spotify_access_token
+    # Check if token is expired (with 5 minute buffer)
+    if user.spotify_token_expiry and user.spotify_token_expiry > datetime.datetime.now() + datetime.timedelta(minutes=5):
+        print(f"Token still valid for user {user_id}")
+        # Validate the token to ensure it's still working
+        if validate_spotify_token(user.spotify_access_token):
+            return user.spotify_access_token
+        else:
+            print(f"Token validation failed for user {user_id}, attempting refresh")
 
-    # Token is expired, use refresh token to get a new one
+    # Token is expired or about to expire, use refresh token to get a new one
     if not user.spotify_refresh_token:
-        print("No refresh token available.")
+        print(f"No refresh token available for user {user_id}")
         return None
 
     try:
+        print(f"Refreshing token for user {user_id}")
         token_url = "https://accounts.spotify.com/api/token"
         auth_string = f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}"
         auth_bytes = auth_string.encode("utf-8")
@@ -192,14 +321,18 @@ def get_spotify_token(user_id):
         
         # Update user with new token
         user.spotify_access_token = token_data.get("access_token")
-        user.spotify_token_expiry = datetime.datetime.now() + datetime.timedelta(seconds=token_data.get("expires_in"))
+        user.spotify_token_expiry = datetime.datetime.now() + datetime.timedelta(seconds=token_data.get("expires_in", 3600))
         if token_data.get("refresh_token"):
             user.spotify_refresh_token = token_data.get("refresh_token")
         db.session.commit()
         
+        print(f"Successfully refreshed token for user {user_id}")
         return user.spotify_access_token
     except requests.RequestException as e:
-        print(f"Error refreshing Spotify token: {e}")
+        print(f"Error refreshing Spotify token for user {user_id}: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error refreshing token for user {user_id}: {e}")
         return None
 
 '''--------------------------------------------------------HELPER-FUNCTION--------------------------------------------------------'''
@@ -316,16 +449,17 @@ def spotify_login():
         session['post_spotify_redirect'] = request.referrer or url_for('home')
     except Exception:
         session['post_spotify_redirect'] = url_for('home')
-
+    
     # Define the scopes (permissions) your app needs
-    scope = 'user-read-private user-read-email streaming app-remote-control user-read-playback-state user-modify-playback-state'
+    SCOPES = 'user-read-private user-read-email streaming app-remote-control user-read-playback-state user-modify-playback-state user-top-read user-library-read'
     
     # Spotify's authorization URL
     auth_url = 'https://accounts.spotify.com/authorize?' + urllib.parse.urlencode({
         'response_type': 'code',
         'client_id': SPOTIFY_CLIENT_ID,
-        'scope': scope,
+        'scope': SCOPES,
         'redirect_uri': SPOTIFY_REDIRECT_URI,
+        'show_dialog': 'true' # Force re-authorization to accept new scopes
     })
     
     return redirect(auth_url)
@@ -379,6 +513,59 @@ def spotify_callback():
     if not next_url:
         next_url = url_for("home")
     return redirect(next_url)
+
+'''--------------------------------------------------------SPOTIFY-DISCONNECT-ROUTE--------------------------------------------------------'''
+
+@app.route('/spotify-disconnect', methods=['POST'])
+def spotify_disconnect():
+    if "user" not in session:
+        flash("You must be logged in to disconnect from Spotify.")
+        return redirect(url_for('login'))
+    
+    user = users.query.filter_by(username=session['user']).first()
+    if user:
+        user.spotify_access_token = None
+        user.spotify_refresh_token = None
+        user.spotify_token_expiry = None
+        db.session.commit()
+        flash("Spotify account unlinked successfully.", "success")
+    else:
+        flash("User not found.", "error")
+        
+    return redirect(url_for('home'))
+
+'''--------------------------------------------------------SPOTIFY-DEBUG-ROUTE--------------------------------------------------------'''
+
+@app.route('/spotify-debug')
+def spotify_debug():
+    if "user" not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    
+    user_id = session.get('user')
+    user = users.query.filter_by(username=user_id).first()
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    debug_info = {
+        'user_id': user_id,
+        'has_access_token': bool(user.spotify_access_token),
+        'has_refresh_token': bool(user.spotify_refresh_token),
+        'token_expiry': user.spotify_token_expiry.isoformat() if user.spotify_token_expiry else None,
+        'token_expired': user.spotify_token_expiry < datetime.datetime.now() if user.spotify_token_expiry else True
+    }
+    
+    # Test token if available
+    if user.spotify_access_token:
+        token = get_spotify_token(user_id)
+        if token:
+            debug_info['token_valid'] = validate_spotify_token(token)
+        else:
+            debug_info['token_valid'] = False
+    else:
+        debug_info['token_valid'] = False
+    
+    return jsonify(debug_info)
 
 '''--------------------------------------------------------CREATE-ROOM-ROUTE--------------------------------------------------------'''
 
@@ -452,11 +639,14 @@ def room_page(room_key):
         return redirect(url_for("home"))
     
     user = users.query.filter_by(username=session['user']).first()
-    if not user or not user.spotify_access_token:
-        # User needs to link Spotify account
+    
+    # Get a fresh Spotify access token
+    spotify_token = get_spotify_token(user.username) if user else None
+
+    if not spotify_token:
         flash('Please link your Spotify account to use the music player.', 'warning')
     
-    return render_template("room.html", room=room_data, user=user)
+    return render_template("room.html", room=room_data, user=user, spotify_access_token=spotify_token)
 
 '''--------------------------------------------------------CREATE-PUBLIC-ROOM-ROUTE--------------------------------------------------------'''
 
@@ -517,17 +707,26 @@ def public_rooms_api():
 def search_songs():
     search_term = request.args.get('q', '').strip()
     user_id = session.get('user')
+    
     if not user_id:
+        print("Search request from unauthenticated user")
         return jsonify({'error': 'User not authenticated'}), 401
 
+    if not search_term:
+        print(f"Empty search term from user {user_id}")
+        return jsonify({'error': 'Search term is required'}), 400
+
+    print(f"Search request from user {user_id} for: {search_term}")
     token = get_spotify_token(user_id)
     if not token:
+        print(f"Failed to get valid token for user {user_id}")
         return jsonify({'error': 'Failed to authenticate with Spotify. Please re-link your account.'}), 500
 
     try:
         search_url = "https://api.spotify.com/v1/search"
         headers = {
-            "Authorization": f"Bearer {token}"
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
         }
         params = {
             "q": search_term,
@@ -535,18 +734,37 @@ def search_songs():
             "limit": 10
         }
         
-        response = requests.get(search_url, headers=headers, params=params, timeout=10)
+        print(f"Making Spotify API request to: {search_url}")
+        response = requests.get(search_url, headers=headers, params=params, timeout=15)
+        
+        if response.status_code == 401:
+            print(f"Spotify API returned 401 Unauthorized for user {user_id}")
+            return jsonify({'error': 'Spotify authentication expired. Please re-link your account.'}), 401
+        elif response.status_code == 403:
+            print(f"Spotify API returned 403 Forbidden for user {user_id}")
+            return jsonify({'error': 'Spotify access denied. Please ensure your account has Spotify Premium and re-link your account.'}), 403
+        elif response.status_code == 429:
+            print(f"Spotify API rate limit exceeded for user {user_id}")
+            return jsonify({'error': 'Rate limit exceeded. Please try again later.'}), 429
+        
         response.raise_for_status()
         spotify_data = response.json()
 
         songs = []
-        for track in spotify_data.get('tracks', {}).get('items', []):
+        tracks = spotify_data.get('tracks', {}).get('items', [])
+        print(f"Found {len(tracks)} tracks for search: {search_term}")
+        
+        for track in tracks:
             artist_name = track['artists'][0]['name'] if track['artists'] else 'Unknown Artist'
-            artwork_url = track['album']['images'][1]['url'] if track['album']['images'] else None
+            # Use the first available image, fallback to None
+            artwork_url = None
+            if track['album']['images']:
+                # Prefer medium size (index 1), fallback to first available
+                artwork_url = track['album']['images'][1]['url'] if len(track['album']['images']) > 1 else track['album']['images'][0]['url']
             
             songs.append({
                 'id': track['id'],
-                'uri': track['uri'], # New field for the SDK
+                'uri': track['uri'],
                 'title': track['name'],
                 'artist': artist_name,
                 'album': track['album']['name'],
@@ -555,11 +773,15 @@ def search_songs():
                 'preview': track['preview_url']
             })
         
+        print(f"Returning {len(songs)} songs to user {user_id}")
         return jsonify(songs)
     
     except requests.RequestException as e:
-        print(f"Spotify API search error: {e}")
-        return jsonify({'error': 'Failed to fetch music data from Spotify'}), 500
+        print(f"Spotify API search error for user {user_id}: {e}")
+        return jsonify({'error': f'Failed to fetch music data from Spotify: {str(e)}'}), 500
+    except Exception as e:
+        print(f"Unexpected error in search for user {user_id}: {e}")
+        return jsonify({'error': 'An unexpected error occurred while searching'}), 500
 
 '''--------------------------------------------------------LOGOUT-ROUTE--------------------------------------------------------'''
 
@@ -572,5 +794,6 @@ def logout():
 '''--------------------------------------------------------RUN-APP--------------------------------------------------------'''
         
 if __name__ == '__main__':
-    db.create_all()
+    with app.app_context():
+        db.create_all()
     socketio.run(app, port='4444', host='0.0.0.0', debug=False)

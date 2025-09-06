@@ -17,34 +17,30 @@
       href="{{ url_for('static', filename='favicon.svg') }}"
       type="image/x-icon"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
   </head>
   <body class="dark-theme">
     <header class="main-header">
       <div class="logo-container">
-        <a href="/home" class="logo-link">
-          <img
-            src="{{ url_for('static', filename='Jam-Room.png') }}"
-            alt="JamRoom Logo"
-            class="logo"
-          />
-        </a>
+        <img
+          src="{{ url_for('static', filename='Jam-Room.png') }}"
+          alt="JamRoom Logo"
+          class="logo"
+        />
       </div>
       <div class="profile-container">
-        <button class="back-home-btn" id="leave-room-button">Leave Room</button>
+        <img
+          src="{{ url_for('static', filename='account.png') }}"
+          alt="User Profile"
+          class="profile-pic"
+        />
       </div>
     </header>
 
     <main class="room-layout">
-      <section id="main-player-section">
+      <section id="main-player-section" class="player-controls-container">
         <h1>Welcome to {{ room.name }}</h1>
-        {% if not user or not user.spotify_access_token %}
-        <div class="section">
-          <p>Please link your Spotify account to enable playback.</p>
-          <a href="{{ url_for('spotify_login') }}">
-            <button class="connect-spotify-btn">Connect to Spotify</button>
-          </a>
-        </div>
-        {% endif %}
+        
         <div class="room-info">
           <div class="room-key">
             <span class="room-key-label">Room Key:</span>
@@ -93,16 +89,24 @@
             <input
               type="text"
               id="music-search-input"
-              placeholder="Search for songs..."
+              placeholder="Search for songs or artists..."
               class="room-input"
             />
           </div>
           <div id="music-results-container" class="music-results-container">
             </div>
         </section>
+
+        <form action="/home">
+          <button type="submit" class="back-home-btn">Back to Home</button>
+        </form>
+
+        <button id="leave-room-button" class="leave-room-btn">
+          Leave Room
+        </button>
       </section>
 
-      <section id="chat-section">
+      <section id="chat-section" class="chat-container">
         <h2>Chat</h2>
         <div id="messages-container" class="messages-container">
           </div>
@@ -118,14 +122,13 @@
       </section>
     </main>
     
-    <script>
-        const SPOTIFY_ACCESS_TOKEN = "{{ user.spotify_access_token if user and user.spotify_access_token else '' }}";
-        const ROOM_KEY = "{{ room.room_key }}";
-        const CURRENT_USER = "{{ session['user'] }}";
-        const DEFAULT_ARTWORK_URL = "{{ url_for('static', filename='Jam-Room.png') }}";
-    </script>
-    <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='scripts/room.js') }}"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    
+    <script>
+        const SPOTIFY_ACCESS_TOKEN = "{{ spotify_access_token if spotify_access_token else '' }}";
+        const ROOM_KEY = "{{ room.room_key }}";
+        const CURRENT_USER = "{{ session.get('user') }}";
+    </script>
+    <script src="{{ url_for('static', filename='scripts/room.js') }}"></script>
   </body>
 </html>
