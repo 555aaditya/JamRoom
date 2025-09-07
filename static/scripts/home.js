@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const publicRoomsRow1 = document.getElementById('public-rooms-row-1');
-    const publicRoomsRow2 = document.getElementById('public-rooms-row-2');
+    const publicRoomsRow = document.getElementById('public-rooms-row');
 
-    // This is the correct endpoint from your uploaded image_94ec23.png
     fetch('/api/public-rooms')
       .then(response => {
         if (!response.ok) {
@@ -12,35 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .then(data => {
         if (data && data.length > 0) {
-          data.forEach((room, index) => {
-            const roomCard = document.createElement('div'); // Use div instead of <a> for better control
+          data.forEach(room => {
+            const roomCard = document.createElement('div');
             roomCard.classList.add('room-card');
             
-            // Calculate card width based on room name length - ensure it's wide enough for one line
-            const roomName = room.name || 'Unnamed Room';
-            const minWidth = 280; // Minimum width for readability
-            const charWidth = 16; // More accurate width per character
-            const padding = 100; // Extra padding for button and spacing
-            const cardWidth = Math.max(minWidth, roomName.length * charWidth + padding);
-            
-            roomCard.style.width = `${cardWidth}px`;
-            roomCard.style.flexShrink = '0'; // Prevent cards from shrinking
+            // Fixed width is now handled by CSS, so remove dynamic width calculation
+            // roomCard.style.width = `${cardWidth}px`; 
+            roomCard.style.flexShrink = '0'; 
             
             roomCard.innerHTML = `
               <div class="room-card-content">
-                <h3 class="room-name">${roomName}</h3>
+                <h3 class="room-name">${room.name || 'Unnamed Room'}</h3>
                 <p class="room-owner">Owner: ${room.creator || 'Unknown'}</p>
                 <p class="room-listeners">Listeners: ${room.listeners || 0}</p>
                 <button class="join-btn" onclick="window.location.href='/room/${room.room_key}'">Join</button>
               </div>
             `;
             
-            // Distribute cards evenly between the two rows
-            if (index % 2 === 0) {
-              publicRoomsRow1.appendChild(roomCard);
-            } else {
-              publicRoomsRow2.appendChild(roomCard);
-            }
+            publicRoomsRow.appendChild(roomCard);
           });
         }
       })
@@ -48,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Other form submission handlers to prevent default behavior on empty fields
     const createPublicRoomForm = document.getElementById('create-public-room-form');
     const joinRoomForm = document.getElementById('join-room-form');
     const createPrivateRoomForm = document.getElementById('create-private-room-form');
@@ -63,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     joinRoomForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // Prevent default form submission
+        e.preventDefault();
         
         const roomKeyInput = e.target.querySelector('input[name="room_key"]');
         const roomKey = roomKeyInput.value.trim();

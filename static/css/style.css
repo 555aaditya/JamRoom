@@ -28,24 +28,7 @@ body {
   object-fit: contain;
 }
 
-.profile-container {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.profile-pic {
-  height: 3.5rem;
-  width: 3.5rem;
-  border-radius: 50%;
-  background-color: #333;
-  border: 2px solid #444;
-  transition: border-color 0.2s ease-in-out;
-}
-
-.profile-pic:hover {
-  border-color: #6366f1;
-}
+/* Removed `.profile-container` and `.profile-pic` styles */
 
 .main-content {
   padding: 2rem;
@@ -61,6 +44,7 @@ body {
 /* Public Rooms Section */
 .public-rooms-container {
     margin-bottom: 2rem;
+    padding-top: 1rem;
 }
 
 .rooms-scroll-wrapper {
@@ -69,6 +53,7 @@ body {
     scrollbar-width: none;
     -ms-overflow-style: none;
     position: relative;
+    padding-bottom: 1rem;
 }
 
 .rooms-scroll-wrapper::-webkit-scrollbar {
@@ -77,19 +62,16 @@ body {
 
 .rooms-row {
     display: flex;
-    gap: 1.25rem;
+    gap: 1.5rem;
     padding: 0.625rem 0.625rem;
     min-width: max-content;
-    align-items: flex-start;
-}
-
-.rooms-row:first-child {
-    margin-bottom: 1.5rem;
+    align-items: stretch;
 }
 
 /* Room Card Styling */
 .room-card {
-    flex: 0 0 auto;
+    flex: 0 0 280px;
+    height: 220px;
     background-color: #2a2a2a;
     border-radius: 0.75rem;
     color: #ffffff;
@@ -97,78 +79,71 @@ body {
     cursor: pointer;
     transition: transform 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     border: 2px solid transparent;
-    height: 200px;
     position: relative;
     overflow: hidden;
-    margin-bottom: 0;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+    box-sizing: border-box;
 }
 
 .room-card:hover {
     border-color: #6366f1;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
 .room-card-content {
-    padding: 2rem;
-    height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    box-sizing: border-box;
-    flex: 1;
+    align-items: flex-start;
+    flex-grow: 1;
 }
 
 .room-name {
-    margin: 0 0 1rem 0;
-    font-size: 1.5rem;
-    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.8rem;
+    font-weight: 800;
     color: #ffffff;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    width: 100%;
 }
 
-.room-owner {
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
-    color: #a0a0a0;
-    font-weight: 500;
-}
-
+.room-owner,
 .room-listeners {
-    margin: 0.5rem 0;
-    font-size: 0.9rem;
+    margin: 0.25rem 0;
+    font-size: 0.95rem;
     color: #a0a0a0;
     font-weight: 500;
 }
 
 .room-card .join-btn {
     position: absolute;
-    bottom: 1rem;
+    bottom: 1.5rem;
     right: 1.5rem;
-    padding: 0.6rem 1.2rem;
+    padding: 0.7rem 1.4rem;
     border: none;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
+    border-radius: 0.6rem;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     color: #fff;
     background-color: #4f46e5;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    min-width: 120px;
-    width: 120px;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.2s ease-in-out;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+    min-width: 100px;
+    width: auto;
 }
 
 .room-card .join-btn:hover {
     background-color: #4338ca;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Private Room Actions */
@@ -216,26 +191,56 @@ body {
   transform: translateY(-1px);
 }
 
-/* Logout Button */
-.logout-btn {
-  padding: 0.6rem 1.2rem;
-  border: 2px solid #dc2626;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
+/* Combined styling for Spotify and Logout buttons */
+.spotify-btn, .logout-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s, border-color 0.2s, color 0.2s;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    background-color: transparent;
+    border: 2px solid;
+    box-shadow: none; /* No shadow by default */
+}
+
+.spotify-btn:hover, .logout-btn:hover {
+  transform: translateY(-1px);
+}
+
+.connect-spotify-btn {
+  color: #1DB954;
+  border-color: #1DB954;
+}
+
+.connect-spotify-btn:hover {
+  background-color: #1DB954;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(29, 185, 84, 0.4);
+}
+
+.disconnect-spotify-btn {
   color: #dc2626;
-  background-color: transparent;
-  transition: all 0.2s ease-in-out;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  border-color: #dc2626;
+}
+
+.disconnect-spotify-btn:hover {
+  background-color: #dc2626;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
+}
+
+.logout-btn {
+  color: #dc2626;
+  border-color: #dc2626;
 }
 
 .logout-btn:hover {
   background-color: #dc2626;
   color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
 }
 
 /* Music Search */
@@ -264,36 +269,3 @@ body {
 .song-artist { font-size: 0.875rem; color: #a0a0a0; margin-bottom: 0.5rem; }
 .song-actions { display: flex; gap: 0.5rem; }
 .song-actions .join-btn { width: auto; min-width: unset; padding: 0.5rem 0.75rem; }
-
-/* Updated Spotify Button Styles */
-.spotify-btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 2rem; /* Pill shape */
-    font-weight: 700;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    text-decoration: none;
-    color: #fff;
-}
-
-.connect-spotify-btn {
-  background-color: #1DB954; /* Spotify Green */
-}
-
-.connect-spotify-btn:hover {
-  background-color: #1ed760;
-  transform: translateY(-1px);
-}
-
-.disconnect-spotify-btn {
-  background-color: #dc2626; /* Red for disconnect */
-}
-
-.disconnect-spotify-btn:hover {
-  background-color: #b91c1c;
-  transform: translateY(-1px);
-}

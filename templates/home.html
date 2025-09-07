@@ -32,15 +32,10 @@
           class="logo"
         />
       </div>
-      <div class="profile-container">
+      <div>
         <form action="/logout" method="post">
           <button type="submit" class="logout-btn">Logout</button>
         </form>
-        <img
-          src="{{ url_for('static', filename='account.png') }}"
-          alt="User Profile"
-          class="profile-pic"
-        />
       </div>
     </header>
 
@@ -57,12 +52,9 @@
         {% endif %}
       {% endwith %}
       <section class="section">
-        <h2>Explore Public JamRooms</h2>
         <div class="public-rooms-container">
             <div class="rooms-scroll-wrapper">
-                <div class="rooms-row" id="public-rooms-row-1">
-                    </div>
-                <div class="rooms-row" id="public-rooms-row-2">
+                <div class="rooms-row" id="public-rooms-row">
                     </div>
             </div>
         </div>

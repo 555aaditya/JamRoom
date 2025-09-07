@@ -19,6 +19,7 @@
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
   </head>
+
   <body class="dark-theme">
     <header class="main-header">
       <div class="logo-container">
@@ -28,27 +29,29 @@
           class="logo"
         />
       </div>
-      <div class="profile-container">
-        <img
-          src="{{ url_for('static', filename='account.png') }}"
-          alt="User Profile"
-          class="profile-pic"
-        />
+      
+      <div class="header-right">
+          <button id="leave-room-button" class="leave-room-btn">
+            Leave Room
+          </button>
       </div>
     </header>
 
     <main class="room-layout">
       <section id="main-player-section" class="player-controls-container">
-        <h1>Welcome to {{ room.name }}</h1>
         
         <div class="room-info">
           <div class="room-key">
-            <span class="room-key-label">Room Key:</span>
+            <span class="room-key-label">Room Name</span>
+            <span class="room-key-value">{{ room.name }}</span>
+          </div>
+          <div class="room-key">
+            <span class="room-key-label">Room Key</span>
             <span class="room-key-value">{{ room.room_key }}</span>
           </div>
-          <div class="listeners-info">
-            <span class="listeners-label">Listeners:</span>
-            <span class="listeners-count" id="listener-count">{{ room.listeners }}</span>
+          <div class="room-key">
+            <span class="room-key-label">Listeners</span>
+            <span class="room-key-value" id="listener-count">{{ room.listeners }}</span>
           </div>
         </div>
 
@@ -59,7 +62,7 @@
             alt="Album Artwork"
             class="player-artwork-large"
           />
-          <h3 id="player-current-track">Current Track: [No track playing]</h3>
+          <h3 id="player-current-track"></h3>
           <p id="player-status"></p>
 
           <div class="progress-container">
@@ -97,13 +100,6 @@
             </div>
         </section>
 
-        <form action="/home">
-          <button type="submit" class="back-home-btn">Back to Home</button>
-        </form>
-
-        <button id="leave-room-button" class="leave-room-btn">
-          Leave Room
-        </button>
       </section>
 
       <section id="chat-section" class="chat-container">
